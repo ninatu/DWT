@@ -4,15 +4,29 @@
 #include <sstream>
 #include <cmath>
 #include <algorithm>
+#include <functional>
+#include <ctime>
+#include <iomanip>
 
 #include "utils.hpp"
 #include "pruned_dtw.hpp"
 #include "dtw.hpp"
 
-//std::vector<std::vector<double>> dtw(const std::vector<std::vector<double>> &tss) {
-//    std::vector<std::vector<double>> dist;
-//
-//}
+
+using Algorithm = std::function<double(const std::vector<double> &, const std::vector<double> &, int)>;
+
+double compute_cpu_time(Algorithm algorithm, const std::vector<std::vector<double>> &tss, double warping_window_width) {
+    std::clock_t c_start = std::clock();
+    for (int i = 0; i < tss.size(); i++) {
+        for (int j = i + 1; j < tss.size(); j++) {
+            int wc = int(warping_window_width * tss[j].size());
+            algorithm(tss[i], tss[j], wc);
+        }
+    }
+    std::clock_t c_end = std::clock();
+    return double(c_end - c_start) / (CLOCKS_PER_SEC);
+}
+
 
 int main(int argc, char *argv[]) {
     std::string algorithm;
@@ -30,27 +44,13 @@ int main(int argc, char *argv[]) {
     }
 
     std::vector<std::vector<double>> tss = readInputFile(data_path);
-    if (algorithm == "dtw") {
-//        int i = 0, j = 2;
-//        std::cout << tss.at(i).size() << " " <<  tss.at(j).size() << std::endl;
-//        std::cout << "DTW:" << dtw(tss.at(i), tss.at(j), 300) << std::endl;
-//        std::cout << "Pruned DTW:" << pruned_dtw(tss.at(i), tss.at(j), 300) << std::endl;
-        for (int i = 0; i < tss.size(); i++) {
-            std::cout << i << std::endl;
-            for (int j = i + 1; j < tss.size(); j++) {
-                double x = dtw(tss.at(i), tss.at(j), 30);
-                double y = pruned_dtw(tss.at(i), tss.at(j), 30);
-                if (std::abs(x - y) > 1e-6) {
-                    std::cout << i << " " << j << std::endl;
-                    std::cout << "DTW:" << x << std::endl;
-                    std::cout << "Pruned DTW:" << y << std::endl;
-//                    throw std::exception();
-                }
-            }
-        }
 
+    if (algorithm == "dtw") {
+        double sec = compute_cpu_time(dtw, tss, 0);
+        std::cout << std::fixed << std::setprecision(2) << sec << std::endl;
     } else if (algorithm == "pruned_dtw") {
-        std::cout << "Pruned DTW:" << pruned_dtw(tss.at(0), tss.at(1)) << std::endl;
+        double sec = compute_cpu_time(pruned_dtw, tss, 0);
+        std::cout << std::fixed << std::setprecision(2) << sec << std::endl;
     } else {
         std::cout << "Algorithm is not implemented yet... :(";
     }

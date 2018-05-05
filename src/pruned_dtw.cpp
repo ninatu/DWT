@@ -14,11 +14,11 @@ double pruned_dtw(const std::vector<double> &ts1, const std::vector<double> &ts2
     std::vector<double> ub_partial(n + 1);
     double last_ub = 0;
     if (n < m) {
-        for(int i = n + 1; i <= m; i++) {
+        for (int i = n + 1; i <= m; i++) {
             last_ub += cost(ts1.at(n), ts2.at(i));
         }
     }
-    for(int i = n; i >= 0; i--) {
+    for (int i = n; i >= 0; i--) {
         ub_partial.at(i) = last_ub;
         last_ub += cost(ts1.at(i), ts2.at(std::min(i, m)));
     }
@@ -36,7 +36,7 @@ double pruned_dtw(const std::vector<double> &ts1, const std::vector<double> &ts2
         bool smaler_found = false;
         int ec_next = i;
         dist[i % 2][sc - 1] = INF;
-        for(int j = std::max<int>(sc, i - ws); j <= std::min<int>(m, i + ws); j++) {
+        for (int j = std::max<int>(sc, i - ws); j <= std::min<int>(m, i + ws); j++) {
             if (j <= ec) {
                 dist[i % 2][j] = cost(ts1[i], ts2[j]) +
                                  std::min(std::min(dist[(i - 1) % 2][j], dist[i % 2][j - 1]), dist[(i - 1) % 2][j - 1]);
