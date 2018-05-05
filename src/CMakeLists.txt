@@ -3,4 +3,4 @@ project(src)
 
 set(CMAKE_CXX_STANDARD 11)
 
-add_executable(src main.cpp)
+add_executable(src main.cpp utils.cpp dtw.cpp pruned_dtw.cpp)
