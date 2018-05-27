@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 project(src)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 
-add_executable(src main.cpp utils.cpp dtw.cpp pruned_dtw.cpp)
+add_executable(src main.cpp dtw.cpp fast_dtw.cpp pruned_dtw.cpp utils.cpp)
