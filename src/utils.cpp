@@ -15,7 +15,7 @@ std::vector<std::vector<double>> readInputFile(const std::string &path) {
             str_line >> x;
 
             // push first empty element for easy computation
-            ts.push_back(0);
+//            ts.push_back(0);
 
             // read ts
             while(str_line >> c >> x) {
@@ -36,7 +36,17 @@ void printComandLineErrorMessage(int argc, char **argv) {
     std::cerr << "Usage: " << argv[0] << " algorith(dtw|pruned_dtw|fast_dtw) part_to_input_file" << std::endl;
 }
 
-double cost(double x, double y) {
-    return (x - y) * (x - y);
-}
 
+int argmin(double x0, double x1, double x2) {
+    if (x0 <= x1) {
+        if (x0 <= x2)
+            return 0;
+        else
+            return 2;
+    } else {
+        if (x1 <= x2)
+            return 1;
+        else
+            return 2;
+    }
+}
