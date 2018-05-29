@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <exception>
 
 #include "common.hpp"
 #include "utils.hpp"
@@ -8,8 +9,20 @@ bool operator==(const DtwPathElement &x, const DtwPathElement &y) {
     return (x.i == y.i) and (x.j == y.j);
 }
 
-double getDist(double x, double y) {
+double getDoubleTsElemDist(const double &x, const double &y) {
     return (x - y) * (x - y);
+}
+
+double getSpeechTsElemDist(const SpeechTsElem &x, const SpeechTsElem &y) {
+    if (x.size() != y.size()) {
+        throw std::exception();
+    }
+
+    double sum = 0;
+    for (int i = 0; i < x.size(); i ++) {
+        sum += x[i] * y[i];
+    }
+    return sum;
 }
 
 void assignNextDtwMatrixElement(DtwMatrix &dtw_matr, int i, int j, double cost) {
@@ -17,7 +30,7 @@ void assignNextDtwMatrixElement(DtwMatrix &dtw_matr, int i, int j, double cost) 
     double d_i = dtw_matr[i - 1][j].val + W_i * cost;
     double d_j = dtw_matr[i][j - 1].val + W_j * cost;
 
-    switch (argmin(d_ij, d_i, d_j)) {
+    switch (utils::argmin(d_ij, d_i, d_j)) {
         case 0:
             dtw_matr[i][j] = DtwMartixElement{d_ij, i - 1, j - 1};
             break;

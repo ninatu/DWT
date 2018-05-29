@@ -11,7 +11,7 @@ namespace dtw {
     DtwAnswer prunedDtw(
             const std::vector<T> &ts1,
             const std::vector<T> &ts2,
-            std::function<double(T, T)> dist,
+            std::function<double(const T&, const T&)> dist,
             int window = -1
     ) {
         int n = int(ts1.size());
@@ -26,12 +26,12 @@ namespace dtw {
         double last_ub = 0;
         if (n < m) {
             for (int i = n + 1; i <= m; i++) {
-                last_ub += getDist(ts1[n - 1], ts2[i - 1]);
+                last_ub += dist(ts1[n - 1], ts2[i - 1]);
             }
         }
         for (int i = n; i > 0; i--) {
             ub_partial[i] = last_ub;
-            last_ub += getDist(ts1[i - 1], ts2[std::min(i, m) - 1]);
+            last_ub += dist(ts1[i - 1], ts2[std::min(i, m) - 1]);
         }
         ub_partial[0] = last_ub;
         double ub = ub_partial[0];

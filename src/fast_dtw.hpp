@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <list>
 #include <functional>
 #include <exception>
 #include <algorithm>
@@ -15,21 +16,32 @@
 namespace detail {
     double getElem(const std::unordered_map<DtwPathElement, DtwMartixElement> &dtw_matr, const DtwPathElement &point);
 
-    Window expandResWindow(const Path low_res_path, int len1, int len2, int radius, int upsample);
+    Window expandResWindow(const Path &low_res_path, int len1, int len2, int radius, int upsample);
+
+    SpeechTsElem quantizeFeatureVector(const SpeechTsElem &vec);
+
+    SpeechTs quantizeFeatures(const SpeechTs &ts);
+
+    void normalizeFeatureVector(SpeechTsElem &vec);
+
+    SpeechTs computeCENT(const SpeechTs &ts, int window, int downsample);
 }
 
 namespace dtw {
 
-    DoubleTs reduce_double_ts(const DoubleTs &ts, int downsample_scale);
+    DoubleTs reduceDoubleTs(const DoubleTs &ts, int downsample_scale);
 
-    SpeechTs reduce_speech_ts(const SpeechTs &ts, int w, int downsample);
+    SpeechTs reduceSpeechTs(const SpeechTs &ts, int w, int downsample);
+
+    DtwAnswer msDtw(const SpeechTs &ts1, const SpeechTs &ts2, int radius, std::list<CentParam> cens_params);
+
 
     template<typename T>
     DtwAnswer dtw(
             const std::vector<T> &ts1,
             const std::vector<T> &ts2,
             const Window &window,
-            std::function<double(T, T)> dist
+            std::function<double(const T&, const T&)> dist
     ) {
         std::unordered_map<DtwPathElement, DtwMartixElement> dtw_matr;
         dtw_matr[DtwPathElement{0, 0}] = DtwMartixElement{0, 0, 0};
@@ -41,7 +53,7 @@ namespace dtw {
             double d_ij = detail::getElem(dtw_matr, DtwPathElement{i - 1, j - 1}) + W_ij * cost;
             double d_i = detail::getElem(dtw_matr, DtwPathElement{i - 1, j}) + W_i * cost;
             double d_j = detail::getElem(dtw_matr, DtwPathElement{i, j - 1}) + W_j * cost;
-            switch (argmin(d_ij, d_i, d_j)) {
+            switch (utils::argmin(d_ij, d_i, d_j)) {
                 case 0:
                     dtw_matr[DtwPathElement{i, j}] = DtwMartixElement{d_ij, i - 1, j - 1};
                     break;
@@ -75,8 +87,12 @@ namespace dtw {
             int radius,
             int downsample_scale,
             std::function<std::vector<T>(std::vector<T>, int)> reduce_ts,
-            std::function<double(T, T)> dist
+            std::function<double(const T&, const T&)> dist
     ) {
+        if (radius < 1) {
+            throw std::exception();
+        }
+
         int min_ts_size = radius + 2;
         if (ts1.size() < min_ts_size or ts2.size() < min_ts_size) {
             return dtw(ts1, ts2, dist);
@@ -89,5 +105,6 @@ namespace dtw {
         auto window = detail::expandResWindow(low_res_path, int(ts1.size()), int(ts2.size()), radius, downsample_scale);
         return dtw(ts1, ts2, window, dist);
     }
+
 }
 

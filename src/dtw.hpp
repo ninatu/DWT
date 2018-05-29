@@ -13,7 +13,7 @@ namespace dtw {
     DtwAnswer dtw(
             const std::vector<T> &ts1,
             const std::vector<T> &ts2,
-            std::function<double(T, T)> dist,
+            std::function<double(const T&, const T&)> dist,
             int window = -1
     ) {
         if (window < 0) {
