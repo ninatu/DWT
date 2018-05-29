@@ -11,6 +11,15 @@
 
 
 namespace utils {
+
+    std::vector<DoubleTs> read_UCR_TS_Archive_2015(const std::string &path);
+
+    std::vector<SpeechTs> readChromaTs(std::istream &file);
+
+    void printComandLineErrorMessage(int argc, char **argv);
+
+    int argmin(double x0, double x1, double x2);
+
     template<typename Head>
     void print(Head &&h) {
         std::cout << std::forward<Head>(h) << std::endl;
@@ -26,7 +35,7 @@ namespace utils {
     double compute_cpu_time(
             std::function<DtwAnswer(const std::vector<T> &, const std::vector<T> &)> algorithm,
             const std::vector<std::vector<T>> &tss
-    ){
+    ) {
         std::clock_t c_start = std::clock();
         for (int i = 0; i < tss.size(); i++) {
             for (int j = i + 1; j < tss.size(); j++) {
@@ -37,16 +46,4 @@ namespace utils {
         return double(c_end - c_start) / (CLOCKS_PER_SEC);
     }
 
-    void printComandLineErrorMessage(int argc, char **argv);
-
-    std::vector<std::vector<double>> readInputFile(const std::string &path);
-
-    int argmin(double x0, double x1, double x2);
-
-} // namespace utils
-
-
-
-
-
-
+}

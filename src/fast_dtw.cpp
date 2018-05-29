@@ -75,6 +75,7 @@ namespace detail {
         for (auto ts_elem : ts) {
             quantTs.push_back(detail::quantizeFeatureVector(ts_elem));
         }
+        return quantTs;
 
     }
 
@@ -147,6 +148,7 @@ namespace dtw {
             std::list<CentParam> cens_params
     ) {
         if (radius < 1) {
+            utils::print("Radius must be more 0");
             throw std::exception();
         }
 
@@ -157,6 +159,10 @@ namespace dtw {
 
         int feature_window = cens_params.front().window;
         int downsample = cens_params.front().downsample;
+        if (feature_window < 1 or downsample < 2) {
+            utils::print("Feature window must be more 0, downsample must be more 1");
+            throw std::exception();
+        }
 
         cens_params.pop_front();
 
