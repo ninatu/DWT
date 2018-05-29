@@ -46,6 +46,9 @@ namespace utils {
             std::stringstream str_line(line);
             // read [
             str_line >> c;
+            if (str_line.eof()) {
+                break;
+            }
             if (c != '[') {
                 utils::print("\'[\' of ts is not found ");
                 throw std::exception();
