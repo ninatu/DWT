@@ -1,13 +1,12 @@
 import os
 import json
-
-import numpy as np
+import math
 
 
 DEFAULT_HOP_LENGTH = 100
 
 GROUP_COMPOSITION_FILENAME = 'composition_groups.json'
-DTW_MAPS_DIRNAME = 'dtw_maps'
+MAPS_DIRNAME = 'maps'
 
 
 class Recording:
@@ -21,8 +20,8 @@ class Recording:
         path = self.dtw_maps[alg_name][number_rec]
 
         tick = cur_time / hop_lenght
-        floor = np.floor(tick)
-        ceil = np.ceil(tick)
+        floor = math.floor(tick)
+        ceil = math.ceil(tick)
         alpha = tick - floor
 
         map_floor = path[floor]
@@ -79,9 +78,9 @@ def find_and_parse_composition_groups(dataset_dir):
 
 
 def find_and_parse_dtw_algs(dataset_dir, group_composition_dict):
-    dtw_dir = os.path.join(dataset_dir, DTW_MAPS_DIRNAME)
+    dtw_dir = os.path.join(dataset_dir, MAPS_DIRNAME)
     if not (os.path.exists(dtw_dir) and os.path.isdir(dtw_dir)):
-        raise ValueError("Directory {} not found in dataset directory.".format(DTW_MAPS_DIRNAME))
+        raise ValueError("Directory {} not found in dataset directory.".format(MAPS_DIRNAME))
 
     for alg_name in os.listdir(dtw_dir):
         dtf_alg_path = os.path.join(dtw_dir, alg_name)

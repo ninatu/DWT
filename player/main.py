@@ -316,7 +316,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser('')
 
     parser.add_argument('--hop_lenght', type=int, default=DEFAULT_HOP_LENGTH,
-                        help='Hop length(ms)')
+                        help='Hop length(ms), default: {} ms'.format(DEFAULT_HOP_LENGTH))
     args = parser.parse_args()
 
     app = wx.App(False)
