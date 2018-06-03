@@ -1,28 +1,45 @@
 import os
-import json
+import argparse
 
 import wx
 import wx.media
 import wx.lib.buttons as buttons
 
-from utils import load_dataset, GROUP_COMPOSITION_FILENAME
+from utils import load_dataset, GROUP_COMPOSITION_FILENAME, DEFAULT_N_FFT, DEFAULT_HOP_LENGTH
+
 
 bitmap_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bitmaps')
 
 
 class PlayerFrame(wx.Frame):
-    def __init__(self):
+    def __init__(self, n_fft, hop_lenght):
         wx.Frame.__init__(self, None, wx.ID_ANY, "Music synchronization player")
 
         wx.Panel(self)
 
+        self.timer = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self.on_timer)
+        self.timer.Start(100)
+
+        self.default_color = wx.ColourDatabase().Find('LIGHT GREY')
+        self.hightlight_color = wx.ColourDatabase().Find("AQUAMARINE")
+
         sp = wx.StandardPaths.Get()
+        self.n_fft = n_fft
+        self.hop_lenght = hop_lenght
+
+        self.playback_sliders = []
+        self.rec_medias = []
+        self.rec_labels = []
+
         self.cur_dataset_dir = sp.GetDocumentsDir()
         self.cur_compose = None
         self.cur_alg = None
+        self.cur_number_record = None
 
         self.set_menubar()
         self.set_panel()
+        self.Layout()
 
     def set_menubar(self):
         menubar = wx.MenuBar()
@@ -36,75 +53,229 @@ class PlayerFrame(wx.Frame):
     def set_panel(self):
         main_sizer = wx.BoxSizer(wx.VERTICAL)
 
-        self.music_alg_sizer = self.set_music_alg_panel()
+        self.music_alg_sizer = self.set_compose_alg_panel()
         self.recs_sizer = self.set_recordings_panel()
         self.audio_bar_panel = self.set_audio_bar_panel()
-        main_sizer.Add(self.music_alg_sizer, flag=wx.EXPAND)
-        main_sizer.Add(self.recs_sizer, flag=wx.EXPAND)
-        main_sizer.Add(self.audio_bar_panel, flag=wx.BOTTOM)
+        # self.log_sizer = self.set_log_panel()
+        main_sizer.Add(self.music_alg_sizer, 0, wx.TOP|wx.BOTTOM|wx.CENTER, 10)
+        main_sizer.Add(self.audio_bar_panel, 0, wx.BOTTOM|wx.CENTER, 10)
+        main_sizer.Add(self.recs_sizer, 1, wx.BOTTOM|wx.EXPAND, 20)
+        # main_sizer.Add(self.log_sizer, 1, wx.ALL, 10)
 
         self.SetSizer(main_sizer)
 
-    def set_music_alg_panel(self):
+    def set_compose_alg_panel(self):
         music_alg_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.music_setup = wx.ComboBox(self, choices=[])
-        music_alg_sizer.Add(self.music_setup, proportion=1, border=30)
-        self.music_setup.Bind(wx.EVT_COMBOBOX, self.set_composition)
+        label_composition = wx.StaticText(self, wx.ID_ANY, 'Composition:')
+        self.composition_setup = wx.Choice(self, choices=[])
+        self.composition_setup.Bind(wx.EVT_CHOICE, self.on_set_composition)
 
-        self.alg_setup = wx.ComboBox(self, choices=[])
-        music_alg_sizer.Add(self.alg_setup, proportion=1, border=30)
+        label_algorithm = wx.StaticText(self, wx.ID_ANY, 'Algorithm:')
+        self.alg_setup = wx.Choice(self, choices=[])
+        self.alg_setup.Bind(wx.EVT_CHOICE, self.on_set_algorithm)
+
+        music_alg_sizer.Add(label_composition, 0, wx.ALL|wx.CENTER, border=5)
+        music_alg_sizer.Add(self.composition_setup, 1, wx.ALL|wx.CENTER, border=5)
+        music_alg_sizer.Add(label_algorithm, 0, wx.ALL|wx.CENTER, border=5)
+        music_alg_sizer.Add(self.alg_setup, 1, wx.ALL|wx.CENTER, border=5)
         return music_alg_sizer
-
-    def set_audio_bar_panel(self):
-        audio_bar_sizer = wx.BoxSizer(wx.HORIZONTAL)
-
-        self.add_button('player_prev.png', self.turn_prev_recording, 'prev', audio_bar_sizer)
-
-        img = wx.Bitmap(os.path.join(bitmap_dir, "player_play.png"))
-        self.playPauseBtn = buttons.GenBitmapToggleButton(self, bitmap=img, name="play")
-        self.playPauseBtn.Enable(False)
-
-        img = wx.Bitmap(os.path.join(bitmap_dir, "player_pause.png"))
-        self.playPauseBtn.SetBitmapSelected(img)
-        self.playPauseBtn.SetInitialSize()
-
-        self.playPauseBtn.Bind(wx.EVT_BUTTON, self.play_recording)
-        audio_bar_sizer.Add(self.playPauseBtn, 0, wx.LEFT, 3)
-
-        # self.add_button("player_stop.png", self.stop_recording, 'stop', audioBarSizer)
-        self.add_button("player_next.png", self.turn_next_recording, 'next', audio_bar_sizer)
-
-        return audio_bar_sizer
-
-    def set_recordings_panel(self):
-        recs_sizer = wx.BoxSizer(wx.VERTICAL)
-        return recs_sizer
 
     def add_button(self, bitmap, handler, name, sizer):
         img = wx.Bitmap(os.path.join(bitmap_dir, bitmap))
         btn = wx.lib.buttons.GenBitmapButton(self, bitmap=img, name=name)
         btn.SetInitialSize()
         btn.Bind(wx.EVT_BUTTON, handler)
-        sizer.Add(btn, 0, wx.LEFT, 3)
+        sizer.Add(btn, 0, wx.ALL, 1)
+        btn.Enable(False)
+        return btn
 
-    def turn_prev_recording(self):
+    def set_audio_bar_panel(self):
+        audio_bar_sizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.prev_btn = self.add_button('player_prev.png', self.on_prev_recording, 'prev', audio_bar_sizer)
+
+        img = wx.Bitmap(os.path.join(bitmap_dir, "player_play.png"))
+        self.play_pause_btn = buttons.GenBitmapToggleButton(self, bitmap=img, name="play")
+        self.play_pause_btn.Enable(False)
+
+        img = wx.Bitmap(os.path.join(bitmap_dir, "player_pause.png"))
+        self.play_pause_btn.SetBitmapSelected(img)
+        self.play_pause_btn.SetInitialSize()
+
+        self.play_pause_btn.Bind(wx.EVT_BUTTON, self.on_play_recording)
+        audio_bar_sizer.Add(self.play_pause_btn, 0, wx.ALL, 1)
+
+        # self.add_button("player_stop.png", self.stop_recording, 'stop', audioBarSizer)
+        self.next_btn = self.add_button("player_next.png", self.on_next_recording, 'next', audio_bar_sizer)
+        return audio_bar_sizer
+
+    def set_log_panel(self):
+        # log_sizer = wx.BoxSizer(wx.VERTICAL)
+        #
+        # self.log_window = wx.LogWindow(self, szTitle='Log Window')
+        # self.log_window.Show()
+        # log_sizer.Add(self.log_window, 0, wx.ALL|wx.ALIGN_BOTTOM, 5)
+        # return log_sizer
         pass
 
-    def turn_next_recording(self):
+    def set_recordings_panel(self):
+        recs_sizer = wx.BoxSizer(wx.VERTICAL)
+        return recs_sizer
+
+    def add_recording(self, name, path):
+        label = wx.StaticText(self, wx.ID_ANY, '{} :'.format(name))
+        media = wx.media.MediaCtrl(self,
+                                       szBackend=wx.media.MEDIABACKEND_GSTREAMER,
+                                       style=wx.SIMPLE_BORDER)
+
+        media.Bind(wx.media.EVT_MEDIA_FINISHED, self.on_start_recording, media)
+        media.Load(path)
+
+        playback_slider = wx.Slider(self, size=wx.DefaultSize)
+        self.Bind(wx.EVT_SLIDER, self.on_seek, playback_slider)
+        playback_slider.SetRange(0, media.Length())
+        return label, media, playback_slider
+
+    def set_recordings(self):
+        for slider in self.playback_sliders:
+            slider.Destroy()
+        for media in self.rec_medias:
+            media.Destroy()
+        for label in self.rec_labels:
+            label.Destroy()
+
+        if self.recs_sizer.GetChildren():
+            self.recs_sizer.Hide(0)
+            self.recs_sizer.Remove(0)
+
+        if self.cur_compose is not None:
+            composition = self.composition_groups[self.cur_compose]
+            for rec in composition.recordings:
+                path = rec.path
+                name = rec.name
+                label, media, playback_slider = self.add_recording(name, path)
+                self.rec_labels.append(label)
+                self.rec_medias.append(media)
+                self.playback_sliders.append(playback_slider)
+
+                self.recs_sizer.Add(label, 0, wx.BOTTOM|wx.LEFT|wx.ALIGN_LEFT, 5)
+                self.recs_sizer.Add(playback_slider, 1, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 10)
+
+            if len(composition.recordings) != 0:
+                self.cur_number_record = 0
+            else:
+                self.cur_number_record = None
+
+            self.recs_sizer.Layout()
+            self.Layout()
+            self.Fit()
+
+
+
+    def on_timer(self, event):
+        if len(self.rec_medias) > 0:
+            pass
+            offset = self.rec_medias[self.cur_number_record].Tell()
+            self.playback_sliders[self.cur_number_record].SetValue(offset)
+
+            recs = self.composition_groups[self.cur_compose].recordings
+            cur_rec = recs[self.cur_number_record]
+
+            for numb_rec, rec in enumerate(recs):
+                if numb_rec == self.cur_number_record:
+                    continue
+
+                rec_offset = cur_rec.get_map_value(
+                    alg_name=self.cur_alg,
+                    number_rec=rec.number,
+                    hop_lenght=self.hop_lenght,
+                    cur_time=offset
+                )
+                self.playback_sliders[numb_rec].SetValue(rec_offset)
+
+    def on_seek(self, event):
+        """
+        Seeks the media file according to the amount the slider has
+        been adjusted.
+        """
+        obj = event.GetEventObject()
+        print(obj)
+        # offset = self.playbackSlider.GetValue()
+        # self.mediaPlayer.Seek(offset)
+
+
+    def on_prev_recording(self, event):
+        recordings = self.composition_groups[self.cur_compose]
+        next_number_record = (self.cur_number_record - 1) % len(recordings)
+        self.turn_recording(next_number_record)
+
+    def on_next_recording(self, event):
+        recordings = self.composition_groups[self.cur_compose]
+        next_number_record = (self.cur_number_record + 1) % len(recordings)
+        self.turn_recording(next_number_record)
+
+    def turn_recording(self, next_number_record):
+        recordings = self.composition_groups[self.cur_compose]
+
+        next_rec = recordings[next_number_record]
+        cur_offset = self.rec_medias[self.cur_number_record].Tell()
+        next_offset = recordings[self.cur_number_record].get_map_value(
+            alg_name=self.cur_alg,
+            number_rec=next_rec.number,
+            hop_lenght=self.hop_lenght,
+            cur_time=cur_offset
+        )
+        self.rec_medias[next_number_record].Seek(next_offset)
+        self.rec_medias[self.cur_number_record].Pause()
+        self.rec_medias[next_number_record].Play()
+
+        self.cur_number_record = next_number_record
+
+    def on_play_recording(self, event):
+        if not event.GetIsDown():
+            self.on_pause_recording()
+            return
+        if self.cur_number_record is not None:
+            ok = self.rec_medias[self.cur_number_record].Play()
+            if not ok:
+                wx.MessageBox("Unable to Play media : Unsupported format?",
+                              "ERROR",
+                              wx.ICON_ERROR | wx.OK)
+        event.Skip()
+
+    def on_start_recording(self, event):
         pass
 
-    def play_recording(self):
-        pass
+    def on_pause_recording(self):
+        self.rec_medias[self.cur_number_record].Pause()
 
-    def set_composition(self, event):
-        self.cur_compose = event.GetValue()
+    def on_set_composition(self, event):
+        self.cur_compose = self.composition_setup.GetString(self.composition_setup.GetSelection())
+        dtw_maps = self.composition_groups[self.cur_compose].recordings[0].dtw_maps
 
-        dtw_maps = self.group_composition[self.cur_compose].recordings[0].dtw_maps
-
-        self.music_setup.Clear()
+        self.alg_setup.Clear()
         for alg in dtw_maps.keys():
-            self.music_setup.Append(alg)
+            self.alg_setup.Append(alg)
+        self.set_recordings()
+
+        if len(dtw_maps.keys()) > 0:
+            self.alg_setup.SetSelection(n=0)
+        else:
+            self.alg_setup = None
+        self.on_set_algorithm(None)
+
+    def on_set_algorithm(self, event):
+        n_sel = self.alg_setup.GetSelection()
+        if n_sel == wx.NOT_FOUND:
+            self.prev_btn.Enable(False)
+            self.play_pause_btn.Enable(False)
+            self.next_btn.Enable(False)
+        else:
+            self.cur_alg = self.alg_setup.GetString(n_sel)
+            self.prev_btn.Enable(True)
+            self.play_pause_btn.Enable(True)
+            self.next_btn.Enable(True)
 
     def load_dataset(self, event):
         dlg = wx.DirDialog(
@@ -114,21 +285,28 @@ class PlayerFrame(wx.Frame):
         if dlg.ShowModal() == wx.ID_OK:
             self.cur_dataset_dir = dlg.GetPath()
             try :
-                self.group_composition = load_dataset(self.cur_dataset_dir)
+                self.composition_groups = load_dataset(self.cur_dataset_dir)
+                self.composition_setup.Clear()
+                for compose in self.composition_groups.keys():
+                    self.composition_setup.Append(compose)
             except Exception as err:
                 msg = wx.MessageDialog(self,
                                        message=str(err),
                                        style=wx.ICON_ERROR | wx.OK)
                 msg.ShowModal()
                 msg.Destroy()
-            self.music_setup.Clear()
-            for compose in self.group_composition.keys():
-                self.music_setup.Append(compose)
         dlg.Destroy()
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser('')
+    parser.add_argument('--n_fft', type=int, default=DEFAULT_N_FFT,
+                        help='FFT window size(ms)')
+    parser.add_argument('--hop_lenght', type=int, default=DEFAULT_HOP_LENGTH,
+                        help='Hop length(ms)')
+    args = parser.parse_args()
+
     app = wx.App(False)
-    frame = PlayerFrame()
+    frame = PlayerFrame(args.n_fft, args.hop_lenght)
     frame.Show()
     app.MainLoop()

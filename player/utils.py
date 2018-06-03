@@ -1,8 +1,13 @@
 import os
 import json
 
+import numpy as np
 
-GROUP_COMPOSITION_FILENAME = 'group_composition.json'
+
+DEFAULT_N_FFT = 200
+DEFAULT_HOP_LENGTH = 100
+
+GROUP_COMPOSITION_FILENAME = 'composition_groups.json'
 DTW_MAPS_DIRNAME = 'dtw_maps'
 
 
@@ -12,6 +17,19 @@ class Recording:
         self.number = number
         self.path = path
         self.dtw_maps = {}
+
+    def get_map_value(self, alg_name, number_rec, hop_lenght, cur_time):
+        path = self.dtw_maps[alg_name][number_rec]
+
+        tick = cur_time / hop_lenght
+        floor = np.floor(tick)
+        ceil = np.ceil(tick)
+        alpha = tick - floor
+
+        map_floor = path[floor]
+        map_ceil = path[ceil]
+        print(tick, floor, ceil, alpha, map_floor, map_ceil)
+        return int(alpha * map_floor + (1 - alpha) * map_ceil) * hop_lenght
 
 
 class Composition:
@@ -56,16 +74,20 @@ def find_and_parse_group_composition(dataset_dir):
 
 
 def find_and_parse_dtw_algs(dataset_dir, group_composition_dict):
+    print(dataset_dir)
     dtw_dir = os.path.join(dataset_dir, DTW_MAPS_DIRNAME)
+    print(dtw_dir)
     if not (os.path.exists(dtw_dir) and os.path.isdir(dtw_dir)):
         raise ValueError("Directory {} not found in dataset directory.".format(DTW_MAPS_DIRNAME))
 
     for alg_name in os.listdir(dtw_dir):
+        print(alg_name)
         dtf_alg_path = os.path.join(dtw_dir, alg_name)
         if not os.path.isdir(dtf_alg_path):
             raise ValueError("{} is not a directory".format(dtf_alg_path))
 
-        for dwt_compose_filename in dtf_alg_path:
+        for dwt_compose_filename in os.listdir(dtf_alg_path):
+            print(dwt_compose_filename)
             composition, _ = os.path.splitext(dwt_compose_filename)
             dtw_compose_fullpath = os.path.join(dtf_alg_path, dwt_compose_filename)
             if composition in group_composition_dict.keys():
@@ -73,6 +95,7 @@ def find_and_parse_dtw_algs(dataset_dir, group_composition_dict):
 
 
 def parse_dtw_file_for_compose(alg_name, filepath, recordings):
+    print(alg_name, filepath)
     try:
         with open(filepath) as f:
             dwt_maps = json.load(f)
@@ -82,7 +105,8 @@ def parse_dtw_file_for_compose(alg_name, filepath, recordings):
     for rec in recordings:
         rec.dtw_maps[alg_name] = {}
 
-    for pair, dtw_path in dwt_maps.item():
+    for pair, dtw_path in dwt_maps.items():
+        pair = list(map(int, pair.split(',')))
         for rec in recordings:
             if rec.number == pair[0]:
                 rec.dtw_maps[alg_name][pair[1]] = create_map_from_dtw_path(dtw_path)
@@ -95,8 +119,18 @@ def parse_dtw_file_for_compose(alg_name, filepath, recordings):
 
 
 def create_map_from_dtw_path(dtw_path):
-    return dtw_path
+    mapping = {}
+    for i, j in dtw_path:
+        mapping[i] = mapping.get(i, []) + [j]
+    for i in mapping.keys():
+        mapping[i] = sum(mapping[i]) / len(mapping[i])
+    return mapping
 
 
 def create_inverse_map_from_dtw_path(dtw_path):
-    return dtw_path
+    mapping = {}
+    for i, j in dtw_path:
+        mapping[j] = mapping.get(j, []) + [i]
+    for i in mapping.keys():
+        mapping[i] = sum(mapping[i]) / len(mapping[i])
+    return mapping
