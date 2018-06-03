@@ -2,9 +2,9 @@
 
 For one and the same piece of music, there often exists a large number of
 recordings representing different interpretations by various musicians.
-This program can load a dataset with the groups of such recordings and 
-precomputed alignments for all recordings in one group using differant algorithm (for example, using DTW), 
-and after that allow you to jump freely between different audio recordings in one group.
+This program allows you to load a dataset with the groups of such recordings and 
+precomputed alignments for all recordings in one group using different algorithms (for example, using DTW, fast-DTW, etc), 
+and after that allows you to jump freely between different audio recordings in one group.
 
 ## Prerequisites
 
@@ -23,8 +23,8 @@ pip install wxpython
 ```
 
 ## Data format
-The demonstration program can open the datasets only with special config.
-The dataset must be orinized with folowing way:
+The demonstration program can open the datasets only with special format.
+The dataset must be organized as follows:
 
     dataset_dir/
         composition_groups.json
@@ -39,19 +39,19 @@ The dataset must be orinized with folowing way:
                 ...
                 compose_name_n.json
 
-`composition_groups.json` is the file containing the description musical composition
- and relative path(relative to the `dataset_dir`) to the its recordings.
+`composition_groups.json` is the file containing the description of the musical composition
+ and relative paths(relative to the `dataset_dir`) for the its recordings.
  For example:
  ```
  { 
-    compose_name_0: [rel_path0, rel_path1, rel_path2],
-    compose_name_1: [rel_path0_0, rel_path1_1]
+    compose_name_0: [rel_path_0_0, rel_path_0_1, rel_path_0_2],
+    ...
+    compose_name_n: [rel_path_1_0, rel_path_1_1]
  }
 ```
 
-`compose_name_k.json` if the file with mapping time moment
-(made with the `hop_length` ms step, i.e 0 ms, hop_length ms, 2 * hop_length ms, ...) 
-of one composition to another.
+`compose_name_k.json` if the file with mapping of time points of one composition
+(made with the `hop_length` ms step, i.e 0 ms, hop_length ms, 2 * hop_length ms, ...) to another one.
 For example, if you have 3 recordings for `compose_name_k`, the file `compose_name_k.json` must have following structure:
 ```
 {
@@ -60,7 +60,7 @@ For example, if you have 3 recordings for `compose_name_k`, the file `compose_na
     "1,2": [(0, 0), (1, 1), (1, 2), ...(m, t)]
 }
 ``` 
-The string `"0,1": [(0, 0), (0, 1), (1, 2), ...(n, m)]` mean that for 0'th recording and 1'st recording 
+The string `"0,1": [(0, 0), (0, 1), (1, 2), ...(n, m)]` means that for 0'th recording and 1'st recording 
 the alignment path is `[(0, 0), (0, 1), (1, 2), ...(n, m)]`.
 
 
@@ -78,11 +78,11 @@ optional arguments:
 
 Then you will see this simple gui:
 
-![gui](demo.png)
+![gui example](demo.png)
 
-Using command `File->Load a dataset`(requires path to dataset, i.e `dataset_dir`), 
-you can load your dataset, and then specifying the composition and algorithm jump
-between different recordings for one composition.
+Using command `File->Load a dataset`(it requires a path to dataset, i.e `dataset_dir`), 
+you can load your dataset, and then specify the composition and algorithm jump
+between different recordings of one composition.
 
 
 
