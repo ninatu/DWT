@@ -19,9 +19,11 @@
 int main(int argc, char *argv[]) {
     std::string algorithm;
     std::string data_path;
-    if (argc == 3) {
+    std::string output_path;
+    if (argc == 4) {
         algorithm = argv[1];
         data_path = argv[2];
+        output_path = argv[3];
         if (algorithm != "dtw" and algorithm != "pruned_dtw" and algorithm != "fast_dtw") {
             utils::printComandLineErrorMessage(argc, argv);
             return -1;
@@ -38,19 +40,23 @@ int main(int argc, char *argv[]) {
     }
 
     std::vector<SpeechTs> tss = utils::readChromaTs(data_file);
+    int radius = 30;
+    std::list<CentParam> cens_params;
+    cens_params.push_back({41, 10});
+    cens_params.push_back({121, 30});
+    cens_params.push_back({271, 90});
 
-    std::list<CentParam> cent_params;
-    cent_params.push_back({41, 10});
-    cent_params.push_back({121, 30});
-    cent_params.push_back({271, 90});
-    double dtw_val2 = dtw::msDtw(tss[0], tss[1], 30, cent_params).dtw;
-    utils::print(dtw_val2);
+    utils::computePairWiseDtw<SpeechTsElem>(
+            [radius, cens_params](const SpeechTs &ts1, const SpeechTs &ts2){ return dtw::msDtw(ts1, ts2, radius, cens_params);},
+            tss,
+            output_path);
+
 
 //    if (algorithm == "dtw") {
-//        double sec = compute_cpu_time(dtw, tss, 0);
+//        double sec = computeCpuTime(dtw, tss, 0);
 //        std::cout << std::fixed << std::setprecision(2) << sec << std::endl;
 //    } else if (algorithm == "pruned_dtw") {
-//        double sec = compute_cpu_time(pruned_dtw, tss, 0);
+//        double sec = computeCpuTime(pruned_dtw, tss, 0);
 //        std::cout << std::fixed << std::setprecision(2) << sec << std::endl;
 //    } else {
 //        std::cout << "Algorithm is not implemented yet... :(";
