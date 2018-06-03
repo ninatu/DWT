@@ -4,7 +4,6 @@ import json
 import numpy as np
 
 
-DEFAULT_N_FFT = 200
 DEFAULT_HOP_LENGTH = 100
 
 GROUP_COMPOSITION_FILENAME = 'composition_groups.json'
@@ -27,8 +26,7 @@ class Recording:
         alpha = tick - floor
 
         map_floor = path[floor]
-        map_ceil = path[ceil]
-        print(tick, floor, ceil, alpha, map_floor, map_ceil)
+        map_ceil = path.get(ceil, map_floor)
         return int(alpha * map_floor + (1 - alpha) * map_ceil) * hop_lenght
 
 
@@ -39,12 +37,19 @@ class Composition:
 
 
 def load_dataset(dataset_dir):
-    group_composition_dict = find_and_parse_group_composition(dataset_dir)
+    group_composition_dict = find_and_parse_composition_groups(dataset_dir)
     find_and_parse_dtw_algs(dataset_dir, group_composition_dict)
+
+    not_algs = []
+    for name, composition in group_composition_dict.items():
+        if len(composition.recordings) == 0 or len(composition.recordings[0].dtw_maps) == 0:
+            not_algs.append(name)
+    for name in not_algs:
+        del group_composition_dict[name]
     return group_composition_dict
 
     
-def find_and_parse_group_composition(dataset_dir):
+def find_and_parse_composition_groups(dataset_dir):
     group_composition_path = os.path.join(dataset_dir, GROUP_COMPOSITION_FILENAME)
     
     if not (os.path.exists(group_composition_path) and os.path.isfile(group_composition_path)):
@@ -74,20 +79,16 @@ def find_and_parse_group_composition(dataset_dir):
 
 
 def find_and_parse_dtw_algs(dataset_dir, group_composition_dict):
-    print(dataset_dir)
     dtw_dir = os.path.join(dataset_dir, DTW_MAPS_DIRNAME)
-    print(dtw_dir)
     if not (os.path.exists(dtw_dir) and os.path.isdir(dtw_dir)):
         raise ValueError("Directory {} not found in dataset directory.".format(DTW_MAPS_DIRNAME))
 
     for alg_name in os.listdir(dtw_dir):
-        print(alg_name)
         dtf_alg_path = os.path.join(dtw_dir, alg_name)
         if not os.path.isdir(dtf_alg_path):
             raise ValueError("{} is not a directory".format(dtf_alg_path))
 
         for dwt_compose_filename in os.listdir(dtf_alg_path):
-            print(dwt_compose_filename)
             composition, _ = os.path.splitext(dwt_compose_filename)
             dtw_compose_fullpath = os.path.join(dtf_alg_path, dwt_compose_filename)
             if composition in group_composition_dict.keys():
@@ -95,7 +96,6 @@ def find_and_parse_dtw_algs(dataset_dir, group_composition_dict):
 
 
 def parse_dtw_file_for_compose(alg_name, filepath, recordings):
-    print(alg_name, filepath)
     try:
         with open(filepath) as f:
             dwt_maps = json.load(f)
