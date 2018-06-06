@@ -14,20 +14,27 @@ namespace detail {
     }
 
     Window expandResWindow(const Path &low_res_path, int len1, int len2, int radius, int upsample) {
-        std::unordered_set<DtwPathElement> low_res_expand_path;
+        std::vector<DtwPathElement> low_res_expand_path;
+        low_res_expand_path.reserve((2 * radius + 1) * (2 * radius + 1) * low_res_expand_path.size());
         for (auto point: low_res_path) {
             for (int i = -radius; i <= radius; i++) {
                 for (int j = -radius; j <= radius; j++) {
-                    low_res_expand_path.insert({point.i + i, point.j + j});
+                    low_res_expand_path.push_back({point.i + i, point.j + j});
                 }
             }
         }
 
-        std::unordered_set<DtwPathElement> high_res_expand_path;
+        std::vector<std::vector<short>> high_res_expand_path(len1);
+        for (int i = 0; i < len1; i++) {
+            high_res_expand_path[i] = std::vector<short>(len2, -1);
+        }
         for (auto point : low_res_expand_path) {
             for (int i = 0; i < upsample; i++) {
                 for (int j = 0; j < upsample; j++) {
-                    high_res_expand_path.insert({point.i * upsample + i, point.j * upsample + j});
+                    int new_i = point.i * upsample + i;
+                    int new_j = point.j * upsample + j;
+                    if (new_i >= 0 and new_i < len1 and new_j >= 0 and new_j < len2)
+                        high_res_expand_path[new_i][new_j] = 1;
                 }
             }
         }
@@ -38,7 +45,7 @@ namespace detail {
             int new_start_j = -1;
             for (int j = start_j; j < len2; j++) {
                 DtwPathElement cur_point{i, j};
-                if (high_res_expand_path.find(cur_point) != high_res_expand_path.end()) {
+                if (high_res_expand_path[i][j] == 1) {
                     window.push_back(cur_point);
                     if (new_start_j < 0) {
                         new_start_j = start_j;
@@ -72,6 +79,7 @@ namespace detail {
 
     SpeechTs quantizeFeatures(const SpeechTs &ts) {
         SpeechTs quantTs;
+        quantTs.reserve(ts.size());
         for (const auto &ts_elem : ts) {
             quantTs.push_back(detail::quantizeFeatureVector(ts_elem));
         }

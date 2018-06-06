@@ -43,40 +43,17 @@ namespace dtw {
             const Window &window,
             std::function<double(const T&, const T&)> dist
     ) {
-        std::unordered_map<DtwPathElement, DtwMartixElement> dtw_matr;
-        dtw_matr[DtwPathElement{0, 0}] = DtwMartixElement{0, 0, 0};
-
+        DtwMatrix dtw_matr(ts1.size() + 1);
+        for (int i = 0; i < ts1.size() + 1; i++) {
+            dtw_matr[i] = std::vector<DtwMartixElement>(ts2.size() + 1, DtwMartixElement{INF, 0, 0});
+        }
+        dtw_matr[0][0] = DtwMartixElement{0, 0, 0};
         for (auto point: window) {
             double cost = dist(ts1[point.i], ts2[point.j]);
-            int i = point.i + 1;
-            int j = point.j + 1;
-            double d_ij = detail::getElem(dtw_matr, DtwPathElement{i - 1, j - 1}) + W_ij * cost;
-            double d_i = detail::getElem(dtw_matr, DtwPathElement{i - 1, j}) + W_i * cost;
-            double d_j = detail::getElem(dtw_matr, DtwPathElement{i, j - 1}) + W_j * cost;
-            switch (utils::argmin(d_ij, d_i, d_j)) {
-                case 0:
-                    dtw_matr[DtwPathElement{i, j}] = DtwMartixElement{d_ij, i - 1, j - 1};
-                    break;
-                case 1:
-                    dtw_matr[DtwPathElement{i, j}] = DtwMartixElement{d_i, i - 1, j};
-                    break;
-                case 2:
-                    dtw_matr[DtwPathElement{i, j}] = DtwMartixElement{d_j, i, j - 1};
-                    break;
-                default:
-                    throw std::exception();
-            }
+            assignNextDtwMatrixElement(dtw_matr, point.i + 1, point.j + 1, cost);
         }
-        double dtw_dist = dtw_matr[DtwPathElement{int(ts1.size()), int(ts2.size())}].val;
-
-        std::vector<DtwPathElement> path;
-        DtwPathElement path_elem{int(ts1.size()), int(ts2.size())};
-        while (path_elem.i != 0 or path_elem.j != 0) {
-            path.push_back(DtwPathElement{path_elem.i - 1, path_elem.j - 1});
-            DtwMartixElement cut_matr_elem = dtw_matr[path_elem];
-            path_elem = DtwPathElement{cut_matr_elem.i, cut_matr_elem.j};
-        }
-        std::reverse(path.begin(), path.end());
+        double dtw_dist = dtw_matr[ts1.size()][ts2.size()].val;
+        Path path = untwistDtwMatrixPath(dtw_matr);
         return DtwAnswer{dtw_dist, path};
     }
 
