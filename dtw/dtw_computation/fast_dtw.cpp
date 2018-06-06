@@ -53,7 +53,7 @@ namespace detail {
     }
 
     SpeechTsElem quantizeFeatureVector(const SpeechTsElem &vec) {
-        SpeechTsElem quant_vec(vec.size());
+        SpeechTsElem quant_vec;
         for (auto elem : vec) {
             if (elem >= 0.4) {
                 quant_vec.push_back(4);
@@ -72,7 +72,7 @@ namespace detail {
 
     SpeechTs quantizeFeatures(const SpeechTs &ts) {
         SpeechTs quantTs;
-        for (auto ts_elem : ts) {
+        for (const auto &ts_elem : ts) {
             quantTs.push_back(detail::quantizeFeatureVector(ts_elem));
         }
         return quantTs;
@@ -85,7 +85,7 @@ namespace detail {
             sum += elem * elem;
         }
         for (auto &elem : vec) {
-            elem /= sum;
+            elem /= std::sqrt(sum);
         }
     }
 
@@ -118,6 +118,45 @@ namespace detail {
         }
         return cent;
     }
+
+
+    DtwAnswer _msDtw(
+            const SpeechTs &ts1,
+            const SpeechTs &ts2,
+            int radius,
+            std::list<CentParam> cens_params
+    ) {
+        if (cens_params.empty()) {
+            throw std::logic_error("cent_params must be not empty always.");
+        }
+
+        int feature_window = cens_params.front().window;
+        int downsample = cens_params.front().downsample;
+        if (feature_window < 1 or downsample < 2) {
+            throw std::invalid_argument("Feature window must be more 0, downsample must be more 1");
+        }
+
+        cens_params.pop_front();
+
+        auto shrunk_ts1 = detail::computeCENT(ts1, feature_window, downsample);
+        auto shrunk_ts2 = detail::computeCENT(ts2, feature_window, downsample);
+
+        int min_ts_size = radius + 2;
+        if (shrunk_ts1.size() < min_ts_size or shrunk_ts2.size() < min_ts_size) {
+            throw std::invalid_argument("Invalid length of time series for computation msDtw with this parameters");
+        }
+
+        if (cens_params.empty()) {
+            return dtw::dtw<SpeechTsElem>(shrunk_ts1, shrunk_ts2, getSpeechTsElemDist);
+        } else {
+            int lower_downsample = cens_params.front().downsample;
+            int upsample = lower_downsample / downsample;
+            auto low_res_path = _msDtw(ts1, ts2, radius, cens_params).path;
+            auto window = detail::expandResWindow(low_res_path, int(shrunk_ts1.size()), int(shrunk_ts2.size()), radius,
+                                                  upsample);
+            return dtw::dtw<SpeechTsElem>(shrunk_ts1, shrunk_ts2, window, getSpeechTsElemDist);
+        }
+    }
 }
 
 namespace dtw {
@@ -138,7 +177,8 @@ namespace dtw {
     }
 
     SpeechTs reduceSpeechTs(const SpeechTs &ts, int w, int downsample) {
-        return ts;
+        // TODO[ninatu] implement
+        throw std::invalid_argument("reduceSpeechTs method is not implemented.");
     }
 
     DtwAnswer msDtw(
@@ -148,31 +188,17 @@ namespace dtw {
             std::list<CentParam> cens_params
     ) {
         if (radius < 1) {
-            utils::print("Radius must be more 0");
-            throw std::exception();
+            throw std::invalid_argument("Radius must be more 0");
         }
 
-        int min_ts_size = radius + 2;
-        if (ts1.size() < min_ts_size or ts2.size() < min_ts_size) {
+        if (cens_params.empty()) {
             return dtw<SpeechTsElem>(ts1, ts2, getSpeechTsElemDist);
+        } else {
+            int downsample = cens_params.front().downsample;
+            auto low_res_path = detail::_msDtw(ts1, ts2, radius, cens_params).path;
+            auto window = detail::expandResWindow(low_res_path, int(ts1.size()), int(ts2.size()), radius, downsample);
+            return dtw<SpeechTsElem>(ts1, ts2, window, getSpeechTsElemDist);
         }
-
-        int feature_window = cens_params.front().window;
-        int downsample = cens_params.front().downsample;
-        if (feature_window < 1 or downsample < 2) {
-            utils::print("Feature window must be more 0, downsample must be more 1");
-            throw std::exception();
-        }
-
-        cens_params.pop_front();
-
-        auto shrunk_ts1 = detail::computeCENT(ts1, feature_window, downsample);
-        auto shrunk_ts2 = detail::computeCENT(ts2, feature_window, downsample);
-
-        auto low_res_path = msDtw(shrunk_ts1, shrunk_ts2, radius, cens_params).path;
-
-        auto window = detail::expandResWindow(low_res_path, int(ts1.size()), int(ts2.size()), radius, downsample);
-        return dtw<SpeechTsElem>(ts1, ts2, window, getSpeechTsElemDist);
     }
 }
 

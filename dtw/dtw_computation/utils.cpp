@@ -26,7 +26,12 @@ namespace utils {
         return tss;
     }
 
-    std::vector<SpeechTs> readChromaTs(std::istream &file) {
+    std::vector<SpeechTs> readChromaTs(const std::string &path) {
+        std::ifstream file(path.c_str());
+        if (! file.is_open()) {
+            throw std::invalid_argument("Can't open file!");
+        }
+
         std::vector<SpeechTs> tss;
         std::string line;
         double x;
@@ -82,16 +87,6 @@ namespace utils {
         }
         return tss;
     }
-
-    void printComandLineErrorMessage(int argc, char **argv) {
-        std::cerr << "Invalid command line parameters: ";
-        for (int i = 0; i < argc; i++) {
-            std::cerr << argv[i] << " ";
-        }
-        std::cerr << std::endl;
-        std::cerr << "Usage: " << argv[0] << " algorith(dtw|pruned_dtw|fast_dtw) part_to_input_file" << std::endl;
-    }
-
 
     int argmin(double x0, double x1, double x2) {
         if (x0 <= x1) {

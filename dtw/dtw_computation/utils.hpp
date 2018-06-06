@@ -6,6 +6,7 @@
 #include <fstream>
 #include <sstream>
 #include <ctime>
+#include <iomanip>
 
 #include "common.hpp"
 
@@ -21,9 +22,7 @@ namespace utils {
 //            [[0.7811984  0.36267271 0.49415439 ... 0.24230753 0.51290877 0.51705223]
 //            ...
 //            [0.6515769  0.42988866 0.3856414  ... 0.29266979 0.47215005 0.50335449]]
-    std::vector<SpeechTs> readChromaTs(std::istream &file);
-
-    void printComandLineErrorMessage(int argc, char **argv);
+    std::vector<SpeechTs> readChromaTs(const std::string &path);
 
     int argmin(double x0, double x1, double x2);
 
@@ -39,22 +38,6 @@ namespace utils {
     }
 
     template<typename T>
-    double computeCpuTime(
-            std::function<DtwAnswer(const std::vector<T> &, const std::vector<T> &)> algorithm,
-            const std::vector<std::vector<T>> &tss
-    ) {
-        std::clock_t c_start = std::clock();
-        for (int i = 0; i < tss.size(); i++) {
-            for (int j = i + 1; j < tss.size(); j++) {
-                algorithm(tss[i], tss[j]);
-            }
-        }
-        std::clock_t c_end = std::clock();
-        return double(c_end - c_start) / (CLOCKS_PER_SEC);
-    }
-
-
-    template<typename T>
     double computePairWiseDtw(
             std::function<DtwAnswer(const std::vector<T> &, const std::vector<T> &)> algorithm,
             const std::vector<std::vector<T>> &tss,
@@ -62,9 +45,17 @@ namespace utils {
     ) {
         std::fstream f_out(output_path, std::fstream::out);
         f_out << '{' << '\n';
-        for (int i = 0; i < tss.size(); i++) {
+        for (int i = 0; i < tss.size() - 1; i++) {
             for (int j = i + 1; j < tss.size(); j++) {
+                // compute dtw
+                std::clock_t c_start = std::clock();
                 DtwAnswer dtw_answer = algorithm(tss[i], tss[j]);
+                std::clock_t c_end = std::clock();
+                double sec =  double(c_end - c_start) / (CLOCKS_PER_SEC);
+                std::cout << std::fixed << std::setprecision(2) << i << ", " << j <<
+                          ": dtw: " << dtw_answer.dtw << ", time: "<< sec << std::endl;
+
+                // saving path
                 f_out << '"' << i << ',' << j << '"' << ": [" ;
                 for (int k = 0; k < dtw_answer.path.size(); k++) {
                     auto path_elem = dtw_answer.path[k];

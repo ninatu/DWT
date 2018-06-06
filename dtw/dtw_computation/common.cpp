@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <exception>
+#include <cmath>
 
 #include "common.hpp"
 #include "utils.hpp"
@@ -19,10 +20,19 @@ double getSpeechTsElemDist(const SpeechTsElem &x, const SpeechTsElem &y) {
     }
 
     double sum = 0;
+    double norm_x = 0;
+    double norm_y = 0;
     for (int i = 0; i < x.size(); i ++) {
         sum += x[i] * y[i];
+        norm_x += x[i] * x[i];
+        norm_y += y[i] * y[i];
     }
-    return sum;
+
+    if (std::abs(norm_x) < 1e-6 or std::abs(norm_y) < 1e-6) {
+        return 0;
+    } else {
+        return 2 - sum / (std::sqrt(norm_x) * std::sqrt(norm_y));
+    }
 }
 
 void assignNextDtwMatrixElement(DtwMatrix &dtw_matr, int i, int j, double cost) {

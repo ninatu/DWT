@@ -4,9 +4,9 @@
 #include <vector>
 
 constexpr double INF = 1e20;
-constexpr double W_ij = 1;
-constexpr double W_i = 1;
-constexpr double W_j = 1;
+constexpr double W_ij = 2;
+constexpr double W_i = 1.5;
+constexpr double W_j = 1.5;
 constexpr double PI  = 3.141592653589793238463;
 
 

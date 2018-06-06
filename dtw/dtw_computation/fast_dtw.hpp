@@ -95,7 +95,7 @@ namespace dtw {
 
         int min_ts_size = radius + 2;
         if (ts1.size() < min_ts_size or ts2.size() < min_ts_size) {
-            return dtw(ts1, ts2, dist);
+            return dtw::dtw(ts1, ts2, dist);
         }
 
         auto shrunk_ts1 = reduce_ts(ts1, downsample_scale);
