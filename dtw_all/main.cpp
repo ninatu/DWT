@@ -28,8 +28,23 @@ void runAlgorithm(int argc, char **argv) {
 }
 
 void printUsageMessage() {
-    std::cerr << "Usage: " << " algorith(dtw|pruned_dtw|fast_dtw|sparce_dtw|new) part_to_input_file" << std::endl;
+    std::cerr << "Usage: " << " algorith(dtw|pruned_dtw <window>|fast_dtw <radius scale>|sparse_dtw <Res>) type(double|vector) part_to_input_file path_to_output_file\n" << std::endl;
 }
+
+bool legal_int(char *str)
+{
+    while (*str != '\0')
+    {
+        if (!isdigit(*str) and !(*str=='e') and !(*str=='.'))
+        {
+           // std::cout <<"not" << *str;
+            return false;
+        }
+        str++;
+    }
+    return true;
+}
+
 
 
 int main(int argc, char *argv[]) {
@@ -37,6 +52,11 @@ int main(int argc, char *argv[]) {
     std::string algorithm;
     std::string input_path;
     std::string output_path;
+    int window = -1;
+    double Res = 0.5;
+    int radius = 30;
+    int scale = 2;
+
     try {
         if (getopt(argc, argv, "h:") != -1) {
             printUsageMessage();
@@ -45,17 +65,83 @@ int main(int argc, char *argv[]) {
 
         if (argc >= 4) {
             algorithm = argv[1];
-            std::cout << algorithm;
-            data_type = argv[2];
-            input_path = argv[3];
-            output_path = argv[4];
+            //std::cout << algorithm;
+            //data_type = argv[2];
+            //input_path = argv[3];
+            //output_path = argv[4];
+
+
+            if (algorithm != "dtw" and algorithm != "pruned_dtw" and algorithm != "fast_dtw" and algorithm != "sparse_dtw") {
+                throw std::invalid_argument("Invalid algorithm param.");
+            }
+
+            int start_in = 2;
+
+            if (algorithm == "dtw"){
+                start_in = 2;
+            }
+            else if(algorithm == "pruned_dtw"){
+
+                if (legal_int(argv[2])){
+
+
+                    std::stringstream str_line(argv[2]);
+
+                    str_line >> window;
+                    start_in = 3;
+                }
+
+               // std::cout << window<< "\n";
+
+
+            }
+            else if(algorithm == "sparse_dtw"){
+                if (legal_int(argv[2])){
+
+
+                    std::stringstream str_line(argv[2]);
+
+                    str_line >> Res;
+                    start_in = 3;
+                }
+
+              //  std::cout << Res<< "\n";
+
+            }
+            else if(algorithm == "fast_dtw"){
+
+                bool is_int = false;
+                if (legal_int(argv[2])){
+                    std::stringstream str_line(argv[2]);
+                    str_line >> radius;
+                    is_int = true;
+
+                }
+
+                if (legal_int(argv[3])){
+                    std::stringstream str_line(argv[3]);
+
+                    str_line >> scale;
+                    start_in = 4;
+                }
+                else{
+
+                    if (is_int){
+                        throw std::invalid_argument("Invalid fast_dtw algorithm parameters.");
+                    }
+                }
+                //std::cout << radius << "\n";
+               // std::cout << scale<< "\n";
+            }
+            if (argc < start_in+3) {
+                throw std::invalid_argument("Invalid input. Type, part_to_input_file, path_to_output_file parameters are missed.");
+            }
+            data_type = argv[start_in];
+            input_path = argv[start_in+1];
+            output_path = argv[start_in+2];
 
             if (data_type != "double" and data_type != "vector") {
                 throw std::invalid_argument("Invalid data_type param.");
-            }
-
-            if (algorithm != "dtw" and algorithm != "pruned_dtw" and algorithm != "fast_dtw" and algorithm != "sparce_dtw") {
-                throw std::invalid_argument("Invalid algorithm param.");
             }
 
         } else {
@@ -77,8 +163,9 @@ int main(int argc, char *argv[]) {
     }
     else{
         tss_d = utils::read_UCR_TS_Archive_2015(input_path);
+
     }
-   // std::cout << tss.size() << '\n';
+
 
     if (algorithm == "dtw") {
         if (data_type == "vector") {
@@ -98,20 +185,14 @@ int main(int argc, char *argv[]) {
                     output_path);
         }
     } else if (algorithm == "fast_dtw") {
-        int radius = 30;
-        int scale = 2;
+
 
         std::list<CentParam> cens_params;
         cens_params.push_back({41, 10});
         cens_params.push_back({121, 30});
-        //10104.97, time: 7.44
-        //0, 1: dtw: 10935.16, time: 4.95
         cens_params.push_back({271, 90});
 
-        //sparce 0, 1: dtw: 11747.47, time: 4.63
-        //0, 1: dtw: 10843.77, time: 6.70
-       // 0, 1: dtw: 11747.47, time: 5.24
-        //0, 1: dtw: 11747.47, time: 4.55
+
         if (data_type == "vector") {
         utils::computePairWiseDtw<SpeechTsElem>(
                 [radius, cens_params](const SpeechTs &ts1, const SpeechTs &ts2){ return dtw::msDtw(ts1, ts2, radius, cens_params);},
@@ -123,26 +204,25 @@ int main(int argc, char *argv[]) {
                     [radius, cens_params, scale](const DoubleTs &ts1, const DoubleTs &ts2){ return dtw::fastDtw<double>(ts1, ts2, radius, scale, dtw::reduceDoubleTs, getDoubleTsElemDist);},
                     tss_d,
                     output_path);
-            //std::cout << "Algorithm is not implemented yet... :(";
         }
 
-    } else if (algorithm == "sparce_dtw") {
+    } else if (algorithm == "sparse_dtw") {
 
-        double Res = 0.5;
-        //DtwAnswer dtw_a = dtw::sparce_dtw<SpeechTsElem>(tss[0], tss[1], getSpeechTsElemDist, Res);
-        //std::cout << dtw_a.dtw;
+       // double Res = 0.5;
+
         if (data_type == "vector") {
             utils::computePairWiseDtw<SpeechTsElem>(
                     [Res](const SpeechTs &ts1, const SpeechTs &ts2) {
-                        return dtw::sparce_dtw<SpeechTsElem>(ts1, ts2, getSpeechTsElemDist, Res);
+                        return dtw::sparse_dtw<SpeechTsElem>(ts1, ts2, getSpeechTsElemDist, Res);
                     },
                     tss_v,
                     output_path);
         }
         else{
+
             utils::computePairWiseDtw<double>(
                     [Res](const DoubleTs &ts1, const DoubleTs &ts2) {
-                        return dtw::sparce_dtw<double>(ts1, ts2, getDoubleTsElemDist, Res);
+                        return dtw::sparse_dtw<double>(ts1, ts2, getDoubleTsElemDist, Res);
                     },
                     tss_d,
                     output_path);
@@ -150,9 +230,8 @@ int main(int argc, char *argv[]) {
         
     } else if (algorithm == "pruned_dtw") {
 
-        int window = -1;
-        //DtwAnswer dtw_a = dtw::sparce_dtw<SpeechTsElem>(tss[0], tss[1], getSpeechTsElemDist, Res);
-        //std::cout << dtw_a.dtw;
+       // int window = -1;
+
         if (data_type == "vector") {
             utils::computePairWiseDtw<SpeechTsElem>(
                     [window](const SpeechTs &ts1, const SpeechTs &ts2) {
