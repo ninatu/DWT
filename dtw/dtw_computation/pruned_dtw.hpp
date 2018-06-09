@@ -26,12 +26,12 @@ namespace dtw {
         double last_ub = 0;
         if (n < m) {
             for (int i = n + 1; i <= m; i++) {
-                last_ub += dist(ts1[n - 1], ts2[i - 1]);
+                last_ub += W_ij * dist(ts1[n - 1], ts2[i - 1]);
             }
         }
         for (int i = n; i > 0; i--) {
             ub_partial[i] = last_ub;
-            last_ub += dist(ts1[i - 1], ts2[std::min(i, m) - 1]);
+            last_ub += W_ij * dist(ts1[i - 1], ts2[std::min(i, m) - 1]);
         }
         ub_partial[0] = last_ub;
         double ub = ub_partial[0];
@@ -65,7 +65,7 @@ namespace dtw {
                 }
             }
             ec = ec_next;
-            ub = dtw_matr[i][i].val + ub_partial[i];
+//            ub = dtw_matr[i][i].val + ub_partial[i];
         }
         return DtwAnswer{dtw_matr[n][m].val, untwistDtwMatrixPath(dtw_matr)};
     }

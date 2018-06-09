@@ -1,17 +1,21 @@
 data_dir="../data/UCR_TS_Archive_2015/"
 files="Car CinC_ECG_torso Haptics InlineSkate MALLAT OliveOil"
 
-mkdir -p results/
+features_dir=${data_dir}/${features_dirname}
 
-for dataset in $files; do
-    echo $dataset
-    cmake-build-debug/src "dtw" "double" ${data_dir}/${dataset}/${dataset}_TRAIN ./results/dtw_res_${dataset}.txt
+files=$(ls ${features_dir})
 
-    cmake-build-debug/src pruned_dtw double ${data_dir}/${dataset}/${dataset}_TRAIN ./results/pruned_dtw_res_${dataset}.txt
+algorithms="dtw ms_dtw pruned_dtw sparse_dtw"
 
-    cmake-build-debug/src sparce_dtw double ${data_dir}/${dataset}/${dataset}_TRAIN ./results/sparce_dtw_res_${dataset}.txt
+for alg in $algorithms; do
+    echo "ALGORITHM: " ${alg}
 
-    cmake-build-debug/src fast_dtw double ${data_dir}/${dataset}/${dataset}_TRAIN ./results/fast_dtw_res_${dataset}.txt
+    output_dir=${data_dir}/${maps_dirname}/${alg}
+    mkdir -p ${output_dir}
 
+    for dataset in $files; do
+        ./build/dtw_computation "vector" ${features_dir}/${dataset} ${output_dir}/${dataset} ${alg}
 done
+done
+
 

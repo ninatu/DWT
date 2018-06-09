@@ -150,11 +150,7 @@ namespace detail {
         auto shrunk_ts2 = detail::computeCENT(ts2, feature_window, downsample);
 
         int min_ts_size = radius + 2;
-        if (shrunk_ts1.size() < min_ts_size or shrunk_ts2.size() < min_ts_size) {
-            throw std::invalid_argument("Invalid length of time series for computation msDtw with this parameters");
-        }
-
-        if (cens_params.empty()) {
+        if (shrunk_ts1.size() < min_ts_size or shrunk_ts2.size() < min_ts_size or cens_params.empty()) {
             return dtw::dtw<SpeechTsElem>(shrunk_ts1, shrunk_ts2, getSpeechTsElemDist);
         } else {
             int lower_downsample = cens_params.front().downsample;
