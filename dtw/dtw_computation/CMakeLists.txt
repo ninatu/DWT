@@ -3,4 +3,4 @@ project(dtw_computation)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(dtw_computation main.cpp sparce_dtw.cpp fast_dtw.cpp utils.cpp common.cpp)
+add_executable(dtw_computation main.cpp fast_dtw.cpp utils.cpp common.cpp)

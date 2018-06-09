@@ -200,7 +200,7 @@ namespace dtw {
 //    double dtw(const std::vector<double> &ts1, const std::vector<double> &ts2, int ws = -1);
 
     template<typename T>
-    DtwAnswer sparce_dtw(
+    DtwAnswer sparse_dtw(
             const std::vector<T> &ts1,
             const std::vector<T> &ts2,
             std::function<double(const T&, const T&)> dist,
